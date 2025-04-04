@@ -1,7 +1,16 @@
 use std::fmt::format;
+use reqwest::{Client, Response};
+use serde::{de::DeserializeOwned, Deserialize};
+
 use crate::{apis::call_request::call_gpt, models::general::llm::{self, Message}};
 
 use super::command_line::PrintCommand;
+
+const CODE_TEMPLATE_PATH : &str = "C:/Users/avish/Desktop/web-server-template-main/src/code_template.rs";
+const EXEC_MAIN_PATH : &str = "C:/Users/avish/Desktop/web-server-template-main/src/main.rs";
+const API_SCHEMA_PATH : &str = "C:/Users/avish/Desktop/coder_gpt/schemas/api_schema.json";
+
+
 
 //extend ai func to allow specific output
 
@@ -32,7 +41,7 @@ pub async fn ai_task_request  (
   agent_operation: &str,
   function_pass: for<'a> fn(&'a str)->&'static str,
 
-)->String{
+)->String {
 
   //extend ai functions
   let extended_msg: Message = extend_ai_function(function_pass, &msg_context);
@@ -50,9 +59,48 @@ pub async fn ai_task_request  (
       Err(_) => call_gpt(vec![extended_msg.clone()]).await.expect("Failed twice to call OpenAi")
   }
 
+}
 
+
+
+//performs call to llm - decoded
+pub async fn ai_task_request_decoded<T: DeserializeOwned>  (
+  msg_context: String,
+  agent_position: &str,
+  agent_operation: &str,
+  function_pass: for<'a> fn(&'a str)->&'static str,
+
+)-> T {
+
+
+  let llm_response:String = ai_task_request(msg_context, agent_position, agent_operation, function_pass).await;
+
+  let decoded_response: T = serde_json::from_str(llm_response.as_str()).expect("Failed to decode ai response from serde_json");
+
+  return decoded_response;
 
 }
+
+
+// check whether request url is valid
+pub async fn check_status_code(client:&Client, url:&str) -> Result<u16, reqwest::Error> {
+    let response: reqwest::Response = client.get(url).send().await?;
+    Ok(response.status().as_u16())
+}
+
+
+// get code template
+
+
+
+
+// Save new backend code
+
+
+
+
+//save json api endpoint schema
+
 
 
 #[cfg(test)]
